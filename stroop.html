@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stroop Testi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .container {
+            max-width: 800px;
+            width: 90%;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .stimulus-container {
+            position: relative;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .stimulus {
+            font-size: 4rem;
+            font-weight: bold;
+            margin: 2rem 0;
+            transition: all 0.3s ease;
+        }
+        
+        .feedback-icon {
+            position: absolute;
+            top: 0;
+            font-size: 2rem;
+            font-weight: bold;
+            z-index: 10;
+            animation: fadeInOut 0.5s;
+        }
+        
+        .correct-icon {
+            color: #22c55e;
+        }
+        
+        .incorrect-icon {
+            color: #ef4444;
+        }
+        
+        .fixation {
+            font-size: 3rem;
+            margin: 2rem 0;
+        }
+        
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0; transform: scale(0.5); }
+        }
+        
+        .btn {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border: none;
+            font-size: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .btn:hover {
+            background-color: #2563eb;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+        
+        .results-table th, .results-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .results-table th {
+            background-color: #f1f5f9;
+            font-weight: bold;
+        }
+        
+        .section {
+            display: none;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .active {
+            display: block;
+        }
+        
+        .progress-container {
+            width: 100%;
+            background-color: #e2e8f0;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            height: 0.5rem;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            border-radius: 0.5rem;
+            background-color: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        
+        .instructions {
+            text-align: left;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .highlight {
+            background-color: #fef08a;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Instruction Screen -->
+        <div id="instruction-screen" class="section active">
+            <h1 class="text-3xl font-bold mb-6">Stroop Testi</h1>
+            <div class="instructions">
+                <p class="mb-4">Bu testte, ekranda renk isimleri göreceksiniz. Bu kelimeler farklı renklerde görüntülenecek.</p>
+                <p class="mb-4"><span class="highlight">Yapmanız gereken:</span> Eğer kelimenin <strong>anlamı</strong> ile <strong>kelimenin rengi</strong> aynı ise (örneğin "KIRMIZI" kelimesi kırmızı renkte yazılmışsa), <span class="highlight">boşluk (space) tuşuna basmalısınız</span>.</p>
+                <p class="mb-4">Eğer kelimenin anlamı ile kendi rengi uyuşmuyorsa (örneğin "KIRMIZI" kelimesi mavi renkte yazılmışsa), <strong>hiçbir şey yapmayın</strong>.</p>
+                <p class="mb-6">Önce 5 denemeden oluşan bir eğitim bölümü olacak, ardından 20 denemeden oluşan asıl teste geçilecek.</p>
+            </div>
+            <button id="start-btn" class="btn">Testi Başlat</button>
+        </div>
+        
+        <!-- Fixation Cross -->
+        <div id="fixation-screen" class="section">
+            <div class="fixation">+</div>
+        </div>
+        
+        <!-- Stimulus Screen -->
+        <div id="stimulus-screen" class="section">
+            <div class="stimulus-container">
+                <div id="stimulus" class="stimulus"></div>
+                <div id="feedback-icon" class="feedback-icon"></div>
+            </div>
+            <div class="progress-container">
+                <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+            </div>
+            <p id="progress-text" class="text-sm text-gray-600">Deneme 1/5</p>
+        </div>
+        
+        <!-- Training Complete Screen -->
+        <div id="training-complete-screen" class="section">
+            <h2 class="text-2xl font-bold mb-4">Eğitim Tamamlandı!</h2>
+            <p class="mb-6">Şimdi asıl teste geçiyoruz. 20 deneme olacak.</p>
+            <p class="mb-6">Aynı kurallar geçerli: <span class="highlight">Kelimenin anlamı ile kendi rengi eşleşiyorsa boşluk tuşuna basın.</span></p>
+            <button id="start-main-test-btn" class="btn">Testi Başlat</button>
+        </div>
+        
+        <!-- Results Screen -->
+        <div id="results-screen" class="section">
+            <h2 class="text-2xl font-bold mb-6">Test Sonuçları</h2>
+            
+            <div class="mb-8">
+                <h3 class="text-xl font-semibold mb-4">Genel Bilgiler</h3>
+                <table class="results-table">
+                    <tr>
+                        <th>Toplam Süre</th>
+                        <td id="total-time">-</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="mb-8">
+                <h3 class="text-xl font-semibold mb-4">Eğitim İstatistikleri</h3>
+                <table class="results-table">
+                    <tr>
+                        <th>Doğru Cevap Sayısı</th>
+                        <td id="training-correct">-</td>
+                    </tr>
+                    <tr>
+                        <th>Doğruluk Oranı</th>
+                        <td id="training-accuracy">-</td>
+                    </tr>
+                    <tr>
+                        <th>Ortalama Tepki Süresi (Doğru Cevaplar)</th>
+                        <td id="training-avg-response">-</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div>
+                <h3 class="text-xl font-semibold mb-4">Ana Test İstatistikleri</h3>
+                <table class="results-table">
+                    <tr>
+                        <th>Doğru Cevap Sayısı</th>
+                        <td id="test-correct">-</td>
+                    </tr>
+                    <tr>
+                        <th>Doğruluk Oranı</th>
+                        <td id="test-accuracy">-</td>
+                    </tr>
+                    <tr>
+                        <th>Ortalama Tepki Süresi (Doğru Cevaplar)</th>
+                        <td id="test-avg-response">-</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <button id="restart-btn" class="btn mt-8">Testi Yeniden Başlat</button>
+        </div>
+    </div>
+
+    <script>
+        // Expanded color words and their actual colors
+        const colorWords = ["KIRMIZI", "MAVİ", "YEŞİL", "SARI", "SİYAH", "TURUNCU", "MOR", "PEMBE", "KAHVERENGİ"];
+        const colors = {
+            "KIRMIZI": "#ef4444",
+            "MAVİ": "#3b82f6",
+            "YEŞİL": "#22c55e",
+            "SARI": "#eab308",
+            "SİYAH": "#000000",
+            "TURUNCU": "#f97316",
+            "MOR": "#a855f7",
+            "PEMBE": "#ec4899",
+            "KAHVERENGİ": "#92400e"
+        };
+        
+        // Test configuration
+        const config = {
+            trainingTrials: 5,
+            mainTestTrials: 20,
+            stimulusDuration: 2500, // ms
+            isiDuration: 1000, // ms (inter-stimulus interval)
+            feedbackDuration: 500 // ms
+        };
+        
+        // State variables
+        let state = {
+            currentPhase: null, // 'training' or 'test'
+            currentTrial: 0,
+            totalTrials: 0,
+            startTime: null,
+            endTime: null,
+            trainingStats: {
+                correctResponses: 0,
+                totalTrials: 0,
+                responseTimes: []
+            },
+            testStats: {
+                correctResponses: 0,
+                totalTrials: 0,
+                responseTimes: []
+            },
+            currentStimulus: null,
+            stimulusStartTime: null,
+            timeoutId: null,
+            isWaitingForResponse: false,
+            lastTrialCorrect: null
+        };
+        
+        // DOM elements
+        const instructionScreen = document.getElementById('instruction-screen');
+        const fixationScreen = document.getElementById('fixation-screen');
+        const stimulusScreen = document.getElementById('stimulus-screen');
+        const trainingCompleteScreen = document.getElementById('training-complete-screen');
+        const resultsScreen = document.getElementById('results-screen');
+        const stimulusElement = document.getElementById('stimulus');
+        const feedbackIcon = document.getElementById('feedback-icon');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const startBtn = document.getElementById('start-btn');
+        const startMainTestBtn = document.getElementById('start-main-test-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const totalTimeElement = document.getElementById('total-time');
+        const trainingCorrectElement = document.getElementById('training-correct');
+        const trainingAccuracyElement = document.getElementById('training-accuracy');
+        const trainingAvgResponseElement = document.getElementById('training-avg-response');
+        const testCorrectElement = document.getElementById('test-correct');
+        const testAccuracyElement = document.getElementById('test-accuracy');
+        const testAvgResponseElement = document.getElementById('test-avg-response');
+        
+        // Event listeners
+        startBtn.addEventListener('click', startTraining);
+        startMainTestBtn.addEventListener('click', startMainTest);
+        restartBtn.addEventListener('click', resetTest);
+        document.addEventListener('keydown', handleKeyPress);
+        
+        // Functions
+        function showScreen(screen) {
+            // Hide all screens
+            const screens = [instructionScreen, fixationScreen, stimulusScreen, trainingCompleteScreen, resultsScreen];
+            screens.forEach(s => s.classList.remove('active'));
+            
+            // Show the requested screen
+            screen.classList.add('active');
+        }
+        
+        function startTraining() {
+            state.currentPhase = 'training';
+            state.currentTrial = 0;
+            state.totalTrials = config.trainingTrials;
+            state.trainingStats = { correctResponses: 0, totalTrials: 0, responseTimes: [] };
+            state.startTime = new Date();
+            
+            showScreen(fixationScreen);
+            setTimeout(startTrial, config.isiDuration);
+        }
+        
+        function startMainTest() {
+            state.currentPhase = 'test';
+            state.currentTrial = 0,
+            state.totalTrials = config.mainTestTrials;
+            state.testStats = { correctResponses: 0, totalTrials: 0, responseTimes: [] };
+            
+            showScreen(fixationScreen);
+            setTimeout(startTrial, config.isiDuration);
+        }
+        
+        function startTrial() {
+            state.currentTrial++;
+            
+            // Update progress
+            const progress = (state.currentTrial / state.totalTrials) * 100;
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `Deneme ${state.currentTrial}/${state.totalTrials}`;
+            
+            // Generate random stimulus
+            const randomWord = colorWords[Math.floor(Math.random() * colorWords.length)];
+            let randomColor;
+            
+            // Decide if this will be congruent or incongruent (50/50 chance)
+            const isCongruent = Math.random() < 0.5;
+            
+            if (isCongruent) {
+                randomColor = colors[randomWord];
+            } else {
+                // Get a different color than the word's meaning
+                const possibleColors = Object.values(colors).filter(c => c !== colors[randomWord]);
+                randomColor = possibleColors[Math.floor(Math.random() * possibleColors.length)];
+            }
+            
+            state.currentStimulus = {
+                word: randomWord,
+                color: randomColor,
+                isCongruent: isCongruent
+            };
+            
+            // Show stimulus
+            stimulusElement.textContent = randomWord;
+            stimulusElement.style.color = randomColor;
+            feedbackIcon.textContent = '';
+            showScreen(stimulusScreen);
+            
+            // Record start time and set timeout for auto-advance
+            state.stimulusStartTime = new Date();
+            state.isWaitingForResponse = true;
+            state.timeoutId = setTimeout(() => {
+                if (state.isWaitingForResponse) {
+                    endTrial(null); // No response
+                }
+            }, config.stimulusDuration);
+        }
+        
+        function endTrial(userResponded) {
+            state.isWaitingForResponse = false;
+            clearTimeout(state.timeoutId);
+            
+            // Determine if response was correct
+            let wasCorrect = false;
+            
+            if (state.currentStimulus.isCongruent) {
+                // For congruent trials, correct response is pressing space
+                wasCorrect = userResponded === true;
+            } else {
+                // For incongruent trials, correct response is NOT pressing space
+                wasCorrect = userResponded === false || userResponded === null;
+            }
+            
+            state.lastTrialCorrect = wasCorrect;
+            
+            // Show feedback icon
+            feedbackIcon.textContent = wasCorrect ? "✓" : "✗";
+            feedbackIcon.className = wasCorrect ? "feedback-icon correct-icon" : "feedback-icon incorrect-icon";
+            
+            // Update statistics
+            if (state.currentPhase === 'training') {
+                state.trainingStats.totalTrials++;
+                if (wasCorrect) {
+                    state.trainingStats.correctResponses++;
+                    // Record response time only for correct space presses on congruent trials
+                    if (userResponded && state.currentStimulus.isCongruent) {
+                        const responseTime = new Date() - state.stimulusStartTime;
+                        state.trainingStats.responseTimes.push(responseTime);
+                    }
+                }
+            } else {
+                state.testStats.totalTrials++;
+                if (wasCorrect) {
+                    state.testStats.correctResponses++;
+                    // Record response time only for correct space presses on congruent trials
+                    if (userResponded && state.currentStimulus.isCongruent) {
+                        const responseTime = new Date() - state.stimulusStartTime;
+                        state.testStats.responseTimes.push(responseTime);
+                    }
+                }
+            }
+            
+            // Wait for feedback to be shown before moving to next trial
+            setTimeout(() => {
+                // Check if we're done with this phase
+                if (state.currentTrial >= state.totalTrials) {
+                    if (state.currentPhase === 'training') {
+                        showScreen(trainingCompleteScreen);
+                    } else {
+                        // Test is complete, show results
+                        state.endTime = new Date();
+                        showResults();
+                    }
+                } else {
+                    // Show fixation before next trial
+                    showScreen(fixationScreen);
+                    setTimeout(startTrial, config.isiDuration);
+                }
+            }, config.feedbackDuration);
+        }
+        
+        function showResults() {
+            // Calculate total time in seconds
+            const totalTimeSec = (state.endTime - state.startTime) / 1000;
+            totalTimeElement.textContent = `${totalTimeSec.toFixed(2)} saniye`;
+            
+            // Training stats
+            trainingCorrectElement.textContent = `${state.trainingStats.correctResponses}/${state.trainingStats.totalTrials}`;
+            
+            const trainingAccuracy = (state.trainingStats.correctResponses / state.trainingStats.totalTrials) * 100;
+            trainingAccuracyElement.textContent = `${trainingAccuracy.toFixed(1)}%`;
+            
+            let trainingAvgResponse = '-';
+            if (state.trainingStats.responseTimes.length > 0) {
+                const sum = state.trainingStats.responseTimes.reduce((a, b) => a + b, 0);
+                trainingAvgResponse = `${(sum / state.trainingStats.responseTimes.length).toFixed(0)} ms`;
+            }
+            trainingAvgResponseElement.textContent = trainingAvgResponse;
+            
+            // Test stats
+            testCorrectElement.textContent = `${state.testStats.correctResponses}/${state.testStats.totalTrials}`;
+            
+            const testAccuracy = (state.testStats.correctResponses / state.testStats.totalTrials) * 100;
+            testAccuracyElement.textContent = `${testAccuracy.toFixed(1)}%`;
+            
+            let testAvgResponse = '-';
+            if (state.testStats.responseTimes.length > 0) {
+                const sum = state.testStats.responseTimes.reduce((a, b) => a + b, 0);
+                testAvgResponse = `${(sum / state.testStats.responseTimes.length).toFixed(0)} ms`;
+            }
+            testAvgResponseElement.textContent = testAvgResponse;
+            
+            showScreen(resultsScreen);
+        }
+        
+        function handleKeyPress(e) {
+            if (e.key === ' ' && state.isWaitingForResponse) {
+                endTrial(true);
+            }
+        }
+        
+        function resetTest() {
+            state = {
+                currentPhase: null,
+                currentTrial: 0,
+                totalTrials: 0,
+                startTime: null,
+                endTime: null,
+                trainingStats: {
+                    correctResponses: 0,
+                    totalTrials: 0,
+                    responseTimes: []
+                },
+                testStats: {
+                    correctResponses: 0,
+                    totalTrials: 0,
+                    responseTimes: []
+                },
+                currentStimulus: null,
+                stimulusStartTime: null,
+                timeoutId: null,
+                isWaitingForResponse: false,
+                lastTrialCorrect: null
+            };
+            
+            showScreen(instructionScreen);
+        }
+    </script>
+</body>
+</html>
